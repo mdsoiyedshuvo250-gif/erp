@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Building2, Wallet, History } from 'lucide-react';
+import { Plus, Building2, Wallet, History, Trash2 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { BankAccount } from '../types';
 
@@ -28,6 +28,21 @@ export default function BankAccounts({ language }: BankAccountsProps) {
 
   const fetchAccounts = () => {
     fetch('/api/bank-accounts').then(res => res.json()).then(setAccounts);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm(language === 'BN' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return;
+    try {
+      const res = await fetch(`/api/bank-accounts/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(language === 'BN' ? data.error || 'ডিলেট করতে সমস্যা হয়েছে' : data.error || 'Error deleting account');
+      } else {
+        fetchAccounts();
+      }
+    } catch (err) {
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করতে সমস্যা হয়েছে' : 'Connection error');
+    }
   };
 
   useEffect(() => {
@@ -59,7 +74,7 @@ export default function BankAccounts({ language }: BankAccountsProps) {
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium transition-all"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5 pointer-events-none" />
           {language === 'BN' ? 'নতুন ব্যাংক যোগ করুন' : 'Add New Bank'}
         </button>
       </div>
@@ -123,13 +138,24 @@ export default function BankAccounts({ language }: BankAccountsProps) {
           <div key={account.id} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:border-indigo-500/30 transition-all group">
             <div className="flex items-start justify-between mb-6">
               <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                <Building2 className="w-6 h-6 text-indigo-500 group-hover:text-white" />
+                <Building2 className="w-6 h-6 text-indigo-500 group-hover:text-white pointer-events-none" />
               </div>
-              <div className="text-right">
-                <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-1">
-                  {account.bank_name}
-                </p>
-                <h4 className="font-bold text-lg">{account.account_name}</h4>
+              <div className="text-right flex flex-col items-end gap-2">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleDelete(account.id)}
+                    className="p-1.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+                    title={language === 'BN' ? 'ডিলিট' : 'Delete'}
+                  >
+                    <Trash2 className="w-4 h-4 pointer-events-none" />
+                  </button>
+                </div>
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider font-bold mb-1">
+                    {account.bank_name}
+                  </p>
+                  <h4 className="font-bold text-lg">{account.account_name}</h4>
+                </div>
               </div>
             </div>
             
@@ -140,7 +166,7 @@ export default function BankAccounts({ language }: BankAccountsProps) {
                   <span className="text-sm">{language === 'BN' ? 'ব্যালেন্স' : 'Balance'}</span>
                 </div>
                 <span className="text-xl font-bold text-emerald-500">
-                  {formatCurrency(account.balance)}
+                  {formatCurrency(account.balance, language)}
                 </span>
               </div>
               

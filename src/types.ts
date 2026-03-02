@@ -23,6 +23,7 @@ export interface Transaction {
   vehicle_id?: number;
   bank_account_id?: number;
   description?: string;
+  odometer_reading?: number;
 }
 
 export interface DriverAdvance {

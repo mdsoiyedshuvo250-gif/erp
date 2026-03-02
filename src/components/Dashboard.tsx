@@ -10,7 +10,10 @@ import {
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
-  FileText as FilePdf
+  FileText as FilePdf,
+  HardDriveDownload,
+  FileDown,
+  History
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -93,11 +96,11 @@ export default function Dashboard({ language }: DashboardProps) {
     doc.text(title, 14, 22);
     
     doc.setFontSize(12);
-    doc.text(`${language === 'BN' ? 'প্রারম্ভিক ব্যালেন্স' : 'Opening Balance'}: ${formatCurrency(data.openingBalance)}`, 14, 32);
-    doc.text(`${language === 'BN' ? 'মোট আয়' : 'Total Income'}: ${formatCurrency(data.totalIncome)}`, 14, 38);
-    doc.text(`${language === 'BN' ? 'মোট ব্যয়' : 'Total Expense'}: ${formatCurrency(data.totalExpense)}`, 14, 44);
-    doc.text(`${language === 'BN' ? 'নিট মুনাফা' : 'Net Profit'}: ${formatCurrency(data.totalIncome - data.totalExpense)}`, 14, 50);
-    doc.text(`${language === 'BN' ? 'বর্তমান হাতে নগদ' : 'Current Cash'}: ${formatCurrency(data.currentCash)}`, 14, 56);
+    doc.text(`${language === 'BN' ? 'প্রারম্ভিক ব্যালেন্স' : 'Opening Balance'}: ${formatCurrency(data.openingBalance, language)}`, 14, 32);
+    doc.text(`${language === 'BN' ? 'মোট আয়' : 'Total Income'}: ${formatCurrency(data.totalIncome, language)}`, 14, 38);
+    doc.text(`${language === 'BN' ? 'মোট ব্যয়' : 'Total Expense'}: ${formatCurrency(data.totalExpense, language)}`, 14, 44);
+    doc.text(`${language === 'BN' ? 'নিট মুনাফা' : 'Net Profit'}: ${formatCurrency(data.totalIncome - data.totalExpense, language)}`, 14, 50);
+    doc.text(`${language === 'BN' ? 'বর্তমান হাতে নগদ' : 'Current Cash'}: ${formatCurrency(data.currentCash, language)}`, 14, 56);
 
     const tableHeaders = [
       language === 'BN' ? 'তারিখ' : 'Date',
@@ -142,23 +145,23 @@ export default function Dashboard({ language }: DashboardProps) {
       bg: 'bg-rose-500/10'
     },
     { 
-      label: language === 'BN' ? 'নিট মুনাফা' : 'Net Profit', 
-      value: data.totalIncome - data.totalExpense, 
-      icon: Wallet, 
-      color: 'text-indigo-500',
-      bg: 'bg-indigo-500/10'
-    },
-    { 
       label: language === 'BN' ? 'ব্যাংক ব্যালেন্স' : 'Bank Balance', 
       value: data.bankBalance, 
       icon: Building2, 
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10'
+      color: 'text-indigo-500',
+      bg: 'bg-indigo-500/10'
     },
     { 
       label: language === 'BN' ? 'বর্তমান হাতে নগদ' : 'Current Cash', 
       value: data.currentCash, 
       icon: Banknote, 
+      color: 'text-amber-500',
+      bg: 'bg-amber-500/10'
+    },
+    { 
+      label: language === 'BN' ? 'মোট ব্যালেন্স' : 'Total Balance', 
+      value: data.totalBalance, 
+      icon: Wallet, 
       color: 'text-white',
       bg: 'bg-indigo-600',
       highlight: true
@@ -250,7 +253,7 @@ export default function Dashboard({ language }: DashboardProps) {
                 </div>
               ) : (
                 <>
-                  <span className="text-3xl md:text-4xl font-bold">{formatCurrency(data.openingBalance)}</span>
+                  <span className="text-3xl md:text-4xl font-bold">{formatCurrency(data.openingBalance, language)}</span>
                   <button 
                     onClick={() => setIsEditingBalance(true)}
                     className="p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400"
@@ -286,7 +289,7 @@ export default function Dashboard({ language }: DashboardProps) {
               {stat.label}
             </p>
             <p className="text-2xl font-bold">
-              {formatCurrency(stat.value)}
+              {formatCurrency(stat.value, language)}
             </p>
           </div>
         ))}

@@ -58,8 +58,17 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
 
   const handleDelete = async (id: number) => {
     if (!confirm(language === 'BN' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return;
-    await fetch(`/api/driver-advances/${id}`, { method: 'DELETE' });
-    fetchData();
+    try {
+      const res = await fetch(`/api/driver-advances/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert(language === 'BN' ? error.error || 'ডিলেট করতে সমস্যা হয়েছে' : error.error || 'Error deleting advance');
+      }
+    } catch (err) {
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করতে সমস্যা হয়েছে' : 'Connection error');
+    }
   };
 
   return (
@@ -77,7 +86,7 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium transition-all"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5 pointer-events-none" />
           {language === 'BN' ? 'নতুন এডভান্স যোগ করুন' : 'Add New Advance'}
         </button>
       </div>
@@ -143,7 +152,7 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
                 "w-12 h-12 rounded-xl flex items-center justify-center",
                 advance.status === 'settled' ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
               )}>
-                {advance.status === 'settled' ? <CheckCircle2 className="w-6 h-6" /> : <Clock className="w-6 h-6" />}
+                {advance.status === 'settled' ? <CheckCircle2 className="w-6 h-6 pointer-events-none" /> : <Clock className="w-6 h-6 pointer-events-none" />}
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -153,7 +162,7 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
                   </span>
                 </div>
                 <p className="text-sm text-gray-400 flex items-center gap-4">
-                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(advance.date).toLocaleDateString()}</span>
+                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3 pointer-events-none" /> {new Date(advance.date).toLocaleDateString()}</span>
                   {advance.description && <span>• {advance.description}</span>}
                 </p>
               </div>
@@ -161,7 +170,7 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
             
             <div className="flex items-center gap-8">
               <div className="text-right">
-                <p className="text-2xl font-bold text-white">{formatCurrency(advance.amount)}</p>
+                <p className="text-2xl font-bold text-white">{formatCurrency(advance.amount, language)}</p>
                 <p className={cn(
                   "text-xs font-bold uppercase tracking-wider",
                   advance.status === 'settled' ? "text-emerald-500" : "text-amber-500"
@@ -183,7 +192,7 @@ export default function DriverAdvances({ language }: DriverAdvancesProps) {
                 onClick={() => handleDelete(advance.id)}
                 className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-5 h-5 pointer-events-none" />
               </button>
             </div>
           </div>

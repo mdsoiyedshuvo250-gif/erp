@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, FileDown, ShieldCheck, HardDriveDownload, Info, Upload, AlertCircle } from 'lucide-react';
+import { Database, FileDown, ShieldCheck, HardDriveDownload, Info, Upload, AlertCircle, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface SettingsProps {
@@ -9,8 +9,23 @@ interface SettingsProps {
 export default function Settings({ language }: SettingsProps) {
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const handleDownloadDB = () => {
-    window.open('/api/backup/db', '_blank');
+  const handleDownloadDB = async () => {
+    try {
+      const res = await fetch('/api/backup/export');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `sangjog_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert(language === 'BN' ? 'ব্যাকআপ ডাউনলোড করতে সমস্যা হয়েছে।' : 'Failed to download backup.');
+    }
   };
 
   const handleExportCSV = () => {
@@ -28,26 +43,57 @@ export default function Settings({ language }: SettingsProps) {
     }
 
     setIsRestoring(true);
-    const formData = new FormData();
-    formData.append('backup', file);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const backup = JSON.parse(event.target?.result as string);
+        const res = await fetch('/api/backup/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(backup),
+        });
+
+        if (res.ok) {
+          alert(language === 'BN' ? 'ডাটা সফলভাবে রিস্টোর হয়েছে!' : 'Data restored successfully!');
+          window.location.reload();
+        } else {
+          alert(language === 'BN' ? 'রিস্টোর করতে সমস্যা হয়েছে।' : 'Failed to restore data.');
+        }
+      } catch (error) {
+        console.error(error);
+        alert(language === 'BN' ? 'ভুল ফাইল ফরম্যাট।' : 'Invalid file format.');
+      } finally {
+        setIsRestoring(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleResetDB = async () => {
+    if (!confirm(language === 'BN' 
+      ? 'আপনি কি নিশ্চিত? এটি সব ডাটা চিরতরে মুছে ফেলবে!' 
+      : 'Are you sure? This will permanently delete all data!')) {
+      return;
+    }
+
+    const password = prompt(language === 'BN' ? 'নিশ্চিত করতে "RESET" লিখুন:' : 'Type "RESET" to confirm:');
+    if (!password || password.toUpperCase() !== 'RESET') {
+      alert(language === 'BN' ? 'ভুল পাসওয়ার্ড!' : 'Incorrect confirmation text!');
+      return;
+    }
 
     try {
-      const res = await fetch('/api/restore/db', {
-        method: 'POST',
-        body: formData,
-      });
-
+      const res = await fetch('/api/backup/reset', { method: 'POST' });
       if (res.ok) {
-        alert(language === 'BN' ? 'ডাটা সফলভাবে রিস্টোর হয়েছে!' : 'Data restored successfully!');
+        alert(language === 'BN' ? 'সব ডাটা মুছে ফেলা হয়েছে।' : 'All data has been cleared.');
         window.location.reload();
       } else {
-        alert(language === 'BN' ? 'রিস্টোর করতে সমস্যা হয়েছে।' : 'Failed to restore data.');
+        const data = await res.json();
+        alert((language === 'BN' ? 'রিসেট করতে সমস্যা হয়েছে: ' : 'Failed to reset: ') + (data.error || res.statusText));
       }
     } catch (error) {
       console.error(error);
-      alert(language === 'BN' ? 'একটি ত্রুটি ঘটেছে।' : 'An error occurred.');
-    } finally {
-      setIsRestoring(false);
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করা যাচ্ছে না।' : 'Could not connect to server.');
     }
   };
 
@@ -108,7 +154,7 @@ export default function Settings({ language }: SettingsProps) {
               : (language === 'BN' ? 'ফাইল সিলেক্ট করুন' : 'Select File')}
             <input 
               type="file" 
-              accept=".db" 
+              accept=".json" 
               className="hidden" 
               onChange={handleRestoreDB} 
               disabled={isRestoring}
@@ -137,6 +183,31 @@ export default function Settings({ language }: SettingsProps) {
               className="px-8 bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/20"
             >
               {language === 'BN' ? 'ডাউনলোড' : 'Download'}
+            </button>
+          </div>
+        </div>
+
+        {/* Reset Database */}
+        <div className="bg-red-500/5 border border-red-500/10 rounded-3xl p-8 hover:border-red-500/30 transition-all group md:col-span-2">
+          <div className="flex items-center gap-6">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center group-hover:bg-red-500 transition-colors">
+              <Trash2 className="w-7 h-7 text-red-500 group-hover:text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-xl font-bold mb-1 text-red-500">
+                {language === 'BN' ? 'সব ডাটা মুছুন (Reset)' : 'Reset All Data'}
+              </h4>
+              <p className="text-gray-400 text-sm">
+                {language === 'BN' 
+                  ? 'সতর্কতা: এটি আপনার সব গাড়ি, লেনদেন এবং সেটিংস চিরতরে মুছে ফেলবে।' 
+                  : 'Warning: This will permanently delete all vehicles, transactions, and settings.'}
+              </p>
+            </div>
+            <button 
+              onClick={handleResetDB}
+              className="px-8 bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white py-3 rounded-xl font-bold transition-all border border-red-500/30"
+            >
+              {language === 'BN' ? 'রিসেট করুন' : 'Reset Now'}
             </button>
           </div>
         </div>

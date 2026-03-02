@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowUpRight, ArrowDownLeft, Calendar, Truck, Building2, FileText, History, ArrowLeftRight, Trash2, Edit2, X } from 'lucide-react';
+import { Plus, ArrowUpRight, ArrowDownLeft, Calendar, Truck, Building2, FileText, History, ArrowLeftRight, Trash2, Edit2, X, Gauge } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 import { Vehicle, BankAccount, Transaction } from '../types';
 
@@ -23,7 +23,8 @@ export default function Transactions({ language }: TransactionsProps) {
     amount: '',
     vehicle_id: '',
     bank_account_id: '',
-    description: ''
+    description: '',
+    odometer_reading: ''
   });
 
   const fetchData = async () => {
@@ -51,13 +52,26 @@ export default function Transactions({ language }: TransactionsProps) {
       body: JSON.stringify({ name: newCategoryName, type: formData.type })
     });
     if (res.ok) {
-      const data = await res.json();
-      setCategories([...categories, { id: data.id, name: newCategoryName, type: formData.type }]);
-      setFormData({ ...formData, category: newCategoryName });
       setNewCategoryName('');
       setIsAddingCategory(false);
+      fetchData();
     } else {
       alert('Category already exists or error occurred');
+    }
+  };
+
+  const handleDeleteCategory = async (id: number) => {
+    if (!confirm(language === 'BN' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return;
+    try {
+      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert(language === 'BN' ? error.error || 'ডিলেট করতে সমস্যা হয়েছে' : error.error || 'Error deleting category');
+      }
+    } catch (err) {
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করতে সমস্যা হয়েছে' : 'Connection error');
     }
   };
 
@@ -65,8 +79,17 @@ export default function Transactions({ language }: TransactionsProps) {
 
   const handleDelete = async (id: number) => {
     if (!confirm(language === 'BN' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return;
-    await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
-    fetchData();
+    try {
+      const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const error = await res.json();
+        alert(language === 'BN' ? error.error || 'ডিলেট করতে সমস্যা হয়েছে' : error.error || 'Error deleting transaction');
+      }
+    } catch (err) {
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করতে সমস্যা হয়েছে' : 'Connection error');
+    }
   };
 
   const handleEdit = (t: any) => {
@@ -77,7 +100,8 @@ export default function Transactions({ language }: TransactionsProps) {
       amount: t.amount.toString(),
       vehicle_id: t.vehicle_id?.toString() || '',
       bank_account_id: t.bank_account_id?.toString() || '',
-      description: t.description || ''
+      description: t.description || '',
+      odometer_reading: t.odometer_reading?.toString() || ''
     });
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -96,6 +120,7 @@ export default function Transactions({ language }: TransactionsProps) {
         amount: parseFloat(formData.amount),
         vehicle_id: formData.vehicle_id ? parseInt(formData.vehicle_id) : null,
         bank_account_id: formData.bank_account_id ? parseInt(formData.bank_account_id) : null,
+        odometer_reading: formData.odometer_reading ? parseFloat(formData.odometer_reading) : null,
       })
     });
     
@@ -105,7 +130,8 @@ export default function Transactions({ language }: TransactionsProps) {
       amount: '',
       vehicle_id: '',
       bank_account_id: '',
-      description: ''
+      description: '',
+      odometer_reading: ''
     });
     setEditingTransaction(null);
     setShowForm(false);
@@ -133,7 +159,8 @@ export default function Transactions({ language }: TransactionsProps) {
                 amount: '',
                 vehicle_id: '',
                 bank_account_id: '',
-                description: ''
+                description: '',
+                odometer_reading: ''
               });
             } else {
               setShowForm(!showForm);
@@ -141,7 +168,7 @@ export default function Transactions({ language }: TransactionsProps) {
           }}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium transition-all"
         >
-          {showForm ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          {showForm ? <X className="w-5 h-5 pointer-events-none" /> : <Plus className="w-5 h-5 pointer-events-none" />}
           {showForm 
             ? (language === 'BN' ? 'বন্ধ করুন' : 'Close') 
             : (language === 'BN' ? 'নতুন লেনদেন' : 'New Transaction')}
@@ -166,7 +193,7 @@ export default function Transactions({ language }: TransactionsProps) {
                     : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                <ArrowUpRight className="w-5 h-5" />
+                <ArrowUpRight className="w-5 h-5 pointer-events-none" />
                 {language === 'BN' ? 'আয়' : 'Income'}
               </button>
               <button
@@ -178,7 +205,7 @@ export default function Transactions({ language }: TransactionsProps) {
                     : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
                 }`}
               >
-                <ArrowDownLeft className="w-5 h-5" />
+                <ArrowDownLeft className="w-5 h-5 pointer-events-none" />
                 {language === 'BN' ? 'ব্যয়' : 'Expense'}
               </button>
             </div>
@@ -187,7 +214,7 @@ export default function Transactions({ language }: TransactionsProps) {
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4 pointer-events-none" />
                   {language === 'BN' ? 'বিভাগ' : 'Category'}
                 </div>
                 <button 
@@ -202,21 +229,37 @@ export default function Transactions({ language }: TransactionsProps) {
               </label>
               
               {isAddingCategory ? (
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newCategoryName}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    placeholder={language === 'BN' ? 'নতুন বিভাগের নাম' : 'New category name'}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    className="bg-indigo-600 px-4 rounded-xl hover:bg-indigo-700 transition-colors"
-                  >
-                    {language === 'BN' ? 'যোগ করুন' : 'Add'}
-                  </button>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder={language === 'BN' ? 'নতুন বিভাগের নাম' : 'New category name'}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      className="bg-indigo-600 px-4 rounded-xl hover:bg-indigo-700 transition-colors"
+                    >
+                      {language === 'BN' ? 'যোগ করুন' : 'Add'}
+                    </button>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                    {filteredCategories.map(c => (
+                      <div key={c.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
+                        <span className="text-sm">{c.name}</span>
+                        <button 
+                          type="button"
+                          onClick={() => handleDeleteCategory(c.id)}
+                          className="p-1 hover:bg-rose-500/10 text-rose-500 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 pointer-events-none" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <select
@@ -237,7 +280,7 @@ export default function Transactions({ language }: TransactionsProps) {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 pointer-events-none" />
                   {language === 'BN' ? 'পরিমাণ' : 'Amount'}
                 </label>
                 <input
@@ -252,7 +295,7 @@ export default function Transactions({ language }: TransactionsProps) {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
+                  <Truck className="w-4 h-4 pointer-events-none" />
                   {language === 'BN' ? 'গাড়ি নির্বাচন করুন' : 'Select Vehicle'}
                 </label>
                 <select
@@ -271,7 +314,21 @@ export default function Transactions({ language }: TransactionsProps) {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
+                  <Gauge className="w-4 h-4 pointer-events-none" />
+                  {language === 'BN' ? 'কিলোমিটার (ওডোমিটার)' : 'Odometer Reading'}
+                </label>
+                <input
+                  type="number"
+                  value={formData.odometer_reading}
+                  onChange={(e) => setFormData({ ...formData, odometer_reading: e.target.value })}
+                  placeholder="0"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 pointer-events-none" />
                   {language === 'BN' ? 'ব্যাংক হিসাব (ঐচ্ছিক)' : 'Bank Account (Optional)'}
                 </label>
                 <select
@@ -291,7 +348,7 @@ export default function Transactions({ language }: TransactionsProps) {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-400 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
+                <FileText className="w-4 h-4 pointer-events-none" />
                 {language === 'BN' ? 'বিবরণ' : 'Description'}
               </label>
               <textarea
@@ -316,7 +373,7 @@ export default function Transactions({ language }: TransactionsProps) {
 
       <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden">
         <div className="p-4 md:p-6 border-b border-white/5 flex items-center gap-2">
-          <History className="w-5 h-5 text-indigo-500" />
+          <History className="w-5 h-5 text-indigo-500 pointer-events-none" />
           <h4 className="font-bold">{language === 'BN' ? 'সাম্প্রতিক লেনদেন' : 'Recent Transactions'}</h4>
         </div>
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
@@ -340,7 +397,15 @@ export default function Transactions({ language }: TransactionsProps) {
                   <td className="px-4 md:px-6 py-4">
                     <div className="flex flex-col">
                       <span className="font-medium">{t.category}</span>
-                      {t.description && <span className="text-xs text-gray-500 line-clamp-1">{t.description}</span>}
+                      <div className="flex flex-col gap-0.5">
+                        {t.odometer_reading && (
+                          <span className="text-[10px] text-indigo-400 flex items-center gap-1">
+                            <Gauge className="w-3 h-3" />
+                            {t.odometer_reading} km
+                          </span>
+                        )}
+                        {t.description && <span className="text-xs text-gray-500 line-clamp-1">{t.description}</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 md:px-6 py-4">
@@ -357,7 +422,7 @@ export default function Transactions({ language }: TransactionsProps) {
                     "px-4 md:px-6 py-4 text-right font-bold text-sm md:text-base",
                     t.type === 'income' ? "text-emerald-500" : "text-rose-500"
                   )}>
-                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                    {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, language)}
                   </td>
                   <td className="px-4 md:px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
@@ -366,14 +431,14 @@ export default function Transactions({ language }: TransactionsProps) {
                         className="p-2 hover:bg-indigo-500/10 text-indigo-500 rounded-lg transition-colors"
                         title={language === 'BN' ? 'এডিট' : 'Edit'}
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-4 h-4 pointer-events-none" />
                       </button>
                       <button 
                         onClick={() => handleDelete(t.id)}
                         className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors"
                         title={language === 'BN' ? 'ডিলিট' : 'Delete'}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 pointer-events-none" />
                       </button>
                     </div>
                   </td>

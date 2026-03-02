@@ -46,8 +46,17 @@ export default function Vehicles({ language }: VehiclesProps) {
 
   const handleDelete = async (id: number) => {
     if (!confirm(language === 'BN' ? 'আপনি কি নিশ্চিত?' : 'Are you sure?')) return;
-    await fetch(`/api/vehicles/${id}`, { method: 'DELETE' });
-    fetchVehicles();
+    try {
+      const res = await fetch(`/api/vehicles/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchVehicles();
+      } else {
+        const error = await res.json();
+        alert(language === 'BN' ? error.error || 'ডিলেট করতে সমস্যা হয়েছে' : error.error || 'Error deleting vehicle');
+      }
+    } catch (err) {
+      alert(language === 'BN' ? 'সার্ভারের সাথে যোগাযোগ করতে সমস্যা হয়েছে' : 'Connection error');
+    }
   };
 
   const handleEdit = (vehicle: Vehicle) => {
@@ -89,7 +98,7 @@ export default function Vehicles({ language }: VehiclesProps) {
           }}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 px-6 py-2.5 rounded-xl font-medium transition-all"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-5 h-5 pointer-events-none" />
           {language === 'BN' ? 'নতুন গাড়ি যোগ করুন' : 'Add New Vehicle'}
         </button>
       </div>
@@ -100,7 +109,7 @@ export default function Vehicles({ language }: VehiclesProps) {
             onClick={() => setShowForm(false)}
             className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-5 h-5 pointer-events-none" />
           </button>
           <h4 className="text-xl font-bold mb-6">
             {editingVehicle 
@@ -168,39 +177,44 @@ export default function Vehicles({ language }: VehiclesProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {vehicles.map((vehicle) => (
-          <div key={vehicle.id} className="bg-white/5 border border-white/5 rounded-3xl p-6 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
-            <div className="absolute top-4 right-4 flex gap-2">
+          <div key={vehicle.id} className="bg-[#151921] border border-white/5 rounded-[32px] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-2xl">
+            {/* Action Buttons - Top Right */}
+            <div className="absolute top-6 right-6 flex gap-2 z-10">
               <button 
                 onClick={() => handleEdit(vehicle)}
-                className="p-2 bg-indigo-600/20 text-indigo-500 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
+                className="p-2.5 bg-white/5 hover:bg-indigo-600 text-gray-400 hover:text-white rounded-xl transition-all backdrop-blur-md border border-white/5 shadow-lg"
                 title={language === 'BN' ? 'এডিট' : 'Edit'}
               >
-                <Edit2 className="w-4 h-4" />
+                <Edit2 className="w-4 h-4 pointer-events-none" />
               </button>
               <button 
                 onClick={() => handleDelete(vehicle.id)}
-                className="p-2 bg-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition-all"
+                className="p-2.5 bg-white/5 hover:bg-rose-600 text-gray-400 hover:text-white rounded-xl transition-all backdrop-blur-md border border-white/5 shadow-lg"
                 title={language === 'BN' ? 'ডিলিট' : 'Delete'}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-4 h-4 pointer-events-none" />
               </button>
             </div>
 
-            <div className="flex items-start justify-between mb-6">
-              <div className="relative group/img">
-                {vehicle.image_url ? (
-                  <img 
-                    src={vehicle.image_url} 
-                    alt={vehicle.name} 
-                    className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500/30"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-2xl bg-indigo-600/20 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                    <Truck className="w-10 h-10 text-indigo-500 group-hover:text-white" />
-                  </div>
-                )}
-                <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-indigo-600 border-2 border-gray-900 rounded-full flex items-center justify-center cursor-pointer hover:bg-indigo-500 text-white shadow-xl transition-all">
-                  <Camera className="w-5 h-5" />
+            <div className="flex flex-col items-start gap-6">
+              {/* Image Section */}
+              <div className="relative">
+                <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-indigo-500/20 shadow-2xl">
+                  {vehicle.image_url ? (
+                    <img 
+                      src={vehicle.image_url} 
+                      alt={vehicle.name} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-indigo-600/10 flex items-center justify-center">
+                      <Truck className="w-10 h-10 text-indigo-500" />
+                    </div>
+                  )}
+                </div>
+                <label className="absolute -bottom-2 -right-2 w-9 h-9 bg-indigo-600 border-4 border-[#151921] rounded-full flex items-center justify-center cursor-pointer hover:bg-indigo-500 text-white shadow-xl transition-all">
+                  <Camera className="w-4 h-4" />
                   <input 
                     type="file" 
                     className="hidden" 
@@ -209,36 +223,53 @@ export default function Vehicles({ language }: VehiclesProps) {
                   />
                 </label>
               </div>
-              <div className={cn(
-                "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider",
-                vehicle.status === 'active' ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-              )}>
-                {vehicle.status === 'active' 
-                  ? (language === 'BN' ? 'সচল' : 'Active') 
-                  : (language === 'BN' ? 'অচল' : 'Inactive')}
+
+              {/* Content Section */}
+              <div className="w-full space-y-6">
+                <div>
+                  <h4 className="text-3xl font-black tracking-tight text-white mb-1 uppercase">{vehicle.name}</h4>
+                  <div className={cn(
+                    "inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] border",
+                    vehicle.status === 'active' 
+                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                      : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                  )}>
+                    {vehicle.status === 'active' 
+                      ? (language === 'BN' ? 'সচল' : 'Active') 
+                      : (language === 'BN' ? 'অচল' : 'Inactive')}
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 text-gray-400 group/item">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover/item:bg-indigo-600/10 transition-colors">
+                      <Hash className="w-4 h-4 group-hover/item:text-indigo-500 transition-colors" />
+                    </div>
+                    <span className="text-base font-medium tracking-wide">{vehicle.number_plate}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-gray-400 group/item">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover/item:bg-indigo-600/10 transition-colors">
+                      <User className="w-4 h-4 group-hover/item:text-indigo-500 transition-colors" />
+                    </div>
+                    <span className="text-base font-medium tracking-wide">{vehicle.driver_name}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-gray-400 group/item">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center group-hover/item:bg-indigo-600/10 transition-colors">
+                      <Activity className="w-4 h-4 group-hover/item:text-indigo-500 transition-colors" />
+                    </div>
+                    <span className="text-base font-medium tracking-wide">
+                      {vehicle.status === 'active' 
+                        ? (language === 'BN' ? 'চলমান' : 'In Operation')
+                        : (language === 'BN' ? 'বন্ধ আছে' : 'Stopped')}
+                    </span>
+                  </div>
+                </div>
+                
+                <button className="w-full py-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all text-sm font-bold text-gray-300 hover:text-white shadow-inner">
+                  {language === 'BN' ? 'বিস্তারিত দেখুন' : 'View Details'}
+                </button>
               </div>
             </div>
-            
-            <h4 className="text-xl font-bold mb-4">{vehicle.name}</h4>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-gray-400">
-                <Hash className="w-4 h-4" />
-                <span className="text-sm">{vehicle.number_plate}</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-400">
-                <User className="w-4 h-4" />
-                <span className="text-sm">{vehicle.driver_name}</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-400">
-                <Activity className="w-4 h-4" />
-                <span className="text-sm">{language === 'BN' ? 'চলমান' : 'In Operation'}</span>
-              </div>
-            </div>
-            
-            <button className="w-full mt-6 py-3 rounded-xl border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium text-gray-400">
-              {language === 'BN' ? 'বিস্তারিত দেখুন' : 'View Details'}
-            </button>
           </div>
         ))}
       </div>
